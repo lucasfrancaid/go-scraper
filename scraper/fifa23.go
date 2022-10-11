@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
 
@@ -36,11 +35,10 @@ func (f *Fifa23) ratingsURL() string {
 	return fmt.Sprintf("https://%s", f.URL)
 }
 
-func (f *Fifa23) Execute() {
+func (f *Fifa23) Execute() Result {
 	c := colly.NewCollector(colly.AllowedDomains(f.URL))
 
 	// TODO: Add pagination ref: last li.page-item
-	fmt.Println("Fifa 23 - Players Rating")
 
 	c.OnHTML("tr", func(e *colly.HTMLElement) {
 		if e.Attr("data-playerid") == "" {
@@ -64,15 +62,23 @@ func (f *Fifa23) Execute() {
 			URL:         e.ChildAttr("td[data-title=Name] a", "href"),
 		}
 
-		fmt.Printf("\n%v° - %s, Age: %v, Pos: %s, OVR: %v, POT: %v, URL: %s",
-			p.Rank, p.Name, p.Age, p.Position, p.Overage, p.Potential, f.ratingsURL()+p.URL)
-
 		f.Ratings = append(f.Ratings, p)
 	})
 
-	err := c.Visit(f.ratingsURL())
-	if err != nil {
-		log.Fatal(err.Error())
+	c.Visit(f.ratingsURL())
+
+	f.cliPrint()
+
+	r := Result{Data: f.Ratings}
+	return r
+}
+
+func (f *Fifa23) cliPrint() {
+	fmt.Println("Fifa 23 - Players Rating")
+
+	for _, p := range f.Ratings {
+		fmt.Printf("\n%v° - %s, Age: %v, Pos: %s, OVR: %v, POT: %v, URL: %s",
+			p.Rank, p.Name, p.Age, p.Position, p.Overage, p.Potential, f.ratingsURL()+p.URL)
 	}
 
 	players := make(map[string]interface{})
@@ -80,11 +86,8 @@ func (f *Fifa23) Execute() {
 
 	content, err := json.Marshal(players)
 	if err != nil {
-		log.Fatal(err.Error())
+		return
 	}
 
-	err = ioutil.WriteFile("ratings.json", content, 0600)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
+	_ = ioutil.WriteFile("ratings.json", content, 0600)
 }

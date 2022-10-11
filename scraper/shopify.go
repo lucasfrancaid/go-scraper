@@ -19,7 +19,7 @@ func (s *Shopify) sitemapURL() string {
 	return fmt.Sprintf("https://%s/sitemap.xml", s.URL)
 }
 
-func (s *Shopify) Execute() {
+func (s *Shopify) Execute() Result {
 	c := colly.NewCollector(colly.AllowedDomains(s.URL))
 
 	c.OnXML("//urlset/url/loc", func(e *colly.XMLElement) {
@@ -28,6 +28,13 @@ func (s *Shopify) Execute() {
 
 	c.Visit(s.sitemapURL())
 
+	s.cliPrint()
+
+	r := Result{Data: s.KnownURLs}
+	return r
+}
+
+func (s *Shopify) cliPrint() {
 	fmt.Printf("Shopify - Known urls (Length: %v): \n", len(s.KnownURLs))
 	for index, url := range s.KnownURLs {
 		if index == 10 {
